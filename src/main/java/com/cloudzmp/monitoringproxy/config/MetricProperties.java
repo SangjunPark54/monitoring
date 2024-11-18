@@ -15,5 +15,6 @@ import lombok.Setter;
 public class MetricProperties {
     private List<String> metrics;
     private List<String> endpoints;
+    private List<String> kubernetesEndpoint;
 
 }

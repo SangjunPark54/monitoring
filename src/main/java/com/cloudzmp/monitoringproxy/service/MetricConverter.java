@@ -6,6 +6,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.Collectors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -28,11 +33,13 @@ public class MetricConverter {
     private final List<String> allowedMetrics;
     private final List<String> endpointList;
     private final RestTemplate restTemplate;
+    private final List<String> kubernetesEndpointList;
 
     public MetricConverter(MetricProperties metricProperties, RestTemplateBuilder restTemplate) {
         this.allowedMetrics = metricProperties.getMetrics();
         this.endpointList = metricProperties.getEndpoints();
         this.restTemplate = restTemplate.build();
+        this.kubernetesEndpointList = metricProperties.getKubernetesEndpoint();
     }
 
     public List<String> getAllMetrics() {
@@ -61,19 +68,34 @@ public class MetricConverter {
         }
     }
 
+//    private List<String> getAllowedMetrics(String rawMetrics) {
+//        log.info("split lines..");
+//        List<String> result = Arrays.stream(rawMetrics.split("\n")).parallel()
+//                .filter(raw -> allowedMetrics.parallelStream().anyMatch(raw::contains))
+//                .collect(Collectors.toList());
+//        log.info("Successfully scrape Metrics");
+//        log.debug("raw:{}, filtered: {}", rawMetrics, result);
+//        return result;
+//    }
+
+
     private List<String> getAllowedMetrics(String rawMetrics) {
-        log.info("split lines..");
-        List<String> result = Arrays.stream(rawMetrics.split("\n")).parallel()
-                .filter(raw -> allowedMetrics.parallelStream().anyMatch(raw::contains))
-                .collect(Collectors.toList());
-        log.info("Successfully scrape Metrics");
-        log.debug("raw:{}, filtered: {}",rawMetrics, result);
-        return result;
+        log.info("start getAllowedMetrics (split + fileter)");
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            return executor.submit(() ->
+                    Arrays.stream(rawMetrics.split("\n"))
+                            .parallel()
+                            .filter(raw -> allowedMetrics.stream().anyMatch(raw::contains))
+                            .collect(Collectors.toList())
+            ).get();
+        } catch (ExecutionException e) {
+            throw new RuntimeException("Error while processing metrics", e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String collectMetrics() throws Exception {
-        // Kubernetes API 서버 URL (기본적으로 kubernetes.default.svc)
-        String apiServerUrl = "https://kubernetes.default.svc/api/v1/nodes";
 
         // Bearer 토큰 파일 경로
         String tokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token";
@@ -91,7 +113,7 @@ public class MetricConverter {
 
         // HTTPS 요청 (TLS 인증서 사용)
         ResponseEntity<String> response = restTemplate.exchange(
-                apiServerUrl,
+                kubernetesEndpointList.get(0),
                 HttpMethod.GET,
                 entity,
                 String.class
