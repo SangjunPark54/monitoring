@@ -11,6 +11,7 @@ import com.cloudzmp.monitoringproxy.config.MetricProperties;
 @ConfigurationPropertiesScan
 @SpringBootApplication
 @EnableAsync
+@EnableConfigurationProperties(MetricProperties.class)
 public class MonitoringProxyApplication {
 
     public static void main(String[] args) {

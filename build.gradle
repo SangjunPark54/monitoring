@@ -29,6 +29,13 @@ dependencies {
     //forApp
 //    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.4'
+    implementation 'com.google.code.gson:gson:2.11.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.1'
+    implementation 'com.fasterxml.jackson.core:jackson-core:2.18.1'
+
+    //will delete
+    implementation 'io.fabric8:kubernetes-client:6.13.4'
 
     //Swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'

@@ -1,0 +1,56 @@
+apiVersion: skaffold/v2beta5
+kind: Config
+metadata:
+  name: console-api
+build:
+  artifacts:
+    - image: cloudzcp/console-api
+      jib: {}
+  tagPolicy:
+    envTemplate:
+      template: "{{.IMAGE_NAME}}:{{.USER}}"
+deploy:
+  helm:
+    releases:
+      - &releases
+        name: "!No matched Profiles for this context!"
+        chartPath: helm/console-api
+        valuesFiles: []
+        artifactOverrides:
+          image: cloudzcp/console-api
+        namespace: console
+
+# Target Clusters
+profiles:
+  - name: local
+    activation:
+      - kubeContext: local
+    deploy:
+      helm:
+        releases:
+          - << : *releases   # Merge Key
+            name: console-api-{{.USER}}
+            valuesFiles:
+              - values/values-local.yaml
+              - values/{{.USER}}/values-local.yaml
+  - name: develop
+    activation:
+      - kubeContext: arn:aws:eks:ap-northeast-2:042956191338:cluster/cloudzcp-mcm-dev
+    deploy:
+      helm:
+        releases:
+          - << : *releases
+            name: console-api-{{.USER}}
+            valuesFiles:
+              - values/values-dev.yaml
+              - values/{{.USER}}/values-dev.yaml
+  - name: repo
+    activation:
+      - env: SKAFFOLD_DEFAULT_REPO=.+
+    patches:
+      - op: replace
+        path: /build/artifacts/0/image
+        value: console-api
+      - op: replace
+        path: /deploy/helm/releases/0/artifactOverrides/image
+        value: console-api
