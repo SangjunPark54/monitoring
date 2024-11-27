@@ -1,18 +1,22 @@
 package com.cloudzmp.monitoringproxy.config;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import lombok.Data;
+import lombok.ToString;
 
 @Data
-@Component
 @ConfigurationProperties(prefix = "zcp")
 public class MetricProperties {
+    private Endpoints endpoints;
+    private GrantMetric grantMetric;
+
     @Data
-    @Component
+    @ToString
     public static class Endpoints {
         private List<String> k8s;
         private List<String> nginx;
@@ -22,27 +26,31 @@ public class MetricProperties {
         private List<String> tekton;
         private List<String> harbor;
         private List<String> loki;
-        private List<String> Oss;
+        private List<String> oss;
+        private List<String> custom;
     }
+
     @Data
-    @Component
-    public static class GrantMetrics {
-        private List<String> ingress;
+    @ToString
+    public static class GrantMetric {
+        private List<String> nginx;
         private List<String> es;
         private List<String> cert;
         private List<String> tekton;
-        private List<String> kubeMetric;
-        private List<String> kubeNode;
         private List<String> mysql;
         private List<String> cortex;
         private List<String> loki;
         private List<String> mongo;
         private List<String> istio;
-        private List<String> node;
         private List<String> harbor;
         private List<String> argocd;
         private List<String> postgresql;
-        private List<String> kubeStateMetrics;
         private List<String> oss;
+        private List<String> custom;
+
+        private List<String> kubeCadvisor;
+        private List<String> kubeMetric;
+        private List<String> kubeNodeMetric;
+        private List<String> kubeStateMetrics;
     }
 }

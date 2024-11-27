@@ -34,6 +34,7 @@ openapi:
 #  ep-oss:
 #    - http://localhost:10003/metrics # nginx-ingress-controller
 #    - http://localhost:10002/metrics # kube-state-metrics Don't Need in here.
+
 zcp:
   token: eyJhbGciOiJSUzI1NiIsImtpZCI6IlJCTE1lT3NUUWFpZVhmRzVKazRWOThnblZ1T3ExdE1YWUpJTkZzM1RPREEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ6Y3Atc3lzdGVtIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6InpjcC1tY20tYmFja2VuZC1zZXJ2aWNlLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InpjcC1tY20tYmFja2VuZC1zZXJ2aWNlLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiMTkyZWQ1YzUtOTQ0YS00OGI2LTk3MWYtNTRjNTg5NGEyMGFlIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OnpjcC1zeXN0ZW06emNwLW1jbS1iYWNrZW5kLXNlcnZpY2UtYWRtaW4ifQ.Q2BRCaDezoXzgUgGGBcfWrFgoaFO-th3GXxUmuZfJKwa_Gk03754IZmbX3yI1psXa6LfVv60CgHHraamKyFLuAjQfjlAEd55PnpaobSQHSjrA-2Vuz4SzC0QB_0yIThRdmejv8DdvF2x7RvWh0GADW56G6IuX5MEPdqZTHT8pjvROvhIHEz5w3z5TXsZB-ipKOmAnkCzX0zSg6Xj2y28o9N3XvimBambfa0ZIxm0jqI28RfIUXp7TozoIGqBbrTVZ5YCfqxNS2wYy2bd4RtBm3ksCy94JptwDBsLK4qe6OAAIeaSlwnt5MzbtxK61fuIZbXYaA7yPQwJ0EETP6tzUw
   realm: ags
@@ -68,13 +69,49 @@ zcp:
       - http://loki-write.logging.svc:3100
       - http://loki-backend.logging.svc:3100
 
-  grant-metric:
-    kube-metric:
+  grantMetric:
+    kubeCadvisor:
+      - container_cpu_usage_seconds_total
+      - container_fs_limit_bytes
+      - container_fs_reads_bytes_total
+      - container_fs_usage_bytes
+      - container_fs_writes_bytes_total
+      - container_memory_rss
+      - container_memory_usage_bytes
+      - container_memory_working_set_bytes
+      - container_network_receive_bytes_total
+      - container_network_receive_errors_total
+      - container_network_transmit_bytes_total
+      - container_network_transmit_errors_total
+
+    kubeResource: #메트릭을 아직 사용 안함.
+      - container_cpuUsage_seconds_total
+      - container_memory_working_set_bytes
+      - container_start_time_seconds
+      - node_cpu_usage_seconds_total
+      - node_memory_working_set_bytes
+      - pod_cpu_usage_seconds_total
+      - pod_memory_working_set_bytes
+      - resource_scrape_error
+      - scrape_error
+    kubeProbes:
+#      - prober_probe_duration_seconds_bucket
+#      - prober_probe_duration_seconds_sum
+#      -
+    kubeMetric: # apiserver, authentication, etcd, process
       - apiserver_request_total
       - apiserver_request_duration_seconds_count
       - apiserver_request_duration_seconds_sum
       - apiserver_request_duration_seconds_bucket
-    kube-node:
+      - kubernetes_build_info
+      - process_cpu_seconds_total
+      - process_open_fds
+      - process_resident_memory_bytes
+      - process_start_time_seconds
+      - workqueue_adds_total
+      - workqueue_depth
+      - workqueue_queue_duration_seconds_bucket
+    kubeNodeMetric:
       - kubelet_cgroup_manager_duration_seconds_bucket
       - kubelet_cgroup_manager_duration_seconds_count
       - kubelet_pleg_relist_duration_seconds_bucket
@@ -396,20 +433,6 @@ zcp:
       - pg_stat_database_tup_updated
       - pg_stat_database_tup_deleted
       - pg_stat_database_tup_returned
-
-    node:
-      - container_cpu_usage_seconds_total
-      - container_memory_working_set_bytes
-      - container_fs_reads_bytes_total
-      - container_fs_writes_bytes_total
-      - container_network_transmit_bytes_total
-      - container_network_receive_bytes_total
-      - container_memory_rss
-      - container_memory_usage_bytes
-      - container_fs_limit_bytes
-      - container_fs_usage_bytes
-      - container_network_receive_errors_total
-      - container_network_transmit_errors_total
     harbor:
       - harbor_up
       - harbor_project_quota_usage_byte
@@ -439,7 +462,7 @@ zcp:
       - nginx_ingress_controller_nginx_process_resident_memory_bytes
       - nginx_ingress_controller_nginx_process_cpu_seconds_total
       - nginx_ingress_controller_request_duration_seconds_bucket
-    unknown:
+    oss:
       - kubelet_node_config_error
       - go_goroutines
       - storage_operation_duration_seconds_count

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.cloudzmp.monitoringproxy.service.MetricCollector;
 import com.cloudzmp.monitoringproxy.service.MetricHandler;
 
 import lombok.extern.slf4j.Slf4j;
@@ -16,110 +17,73 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MetricsController {
 
-    private final MetricHandler metricHandler;
+    private final MetricCollector service;
 
-    public MetricsController(MetricHandler metricHandler) {
-        this.metricHandler = metricHandler;
-    }
-    @GetMapping("/metrics")
-    @ResponseBody
-    public List<String> getFilteredMetrics() {
-        return metricHandler.collectMetricsList();
+    public MetricsController(MetricCollector service) {
+        this.service = service;
     }
 
-    @GetMapping("/getKubeStateMetrics")
     @ResponseBody
-    public String getKubeStateMetrics() {
-        return metricHandler.getKubeStateMetrics();
+    @GetMapping("/metrics/oss/nginx")
+    public String getNginxIngressMetrics() {
+        return service.getNginxIngressMetrics();
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/es")
+    public String getElasticSearchMetrics() {
+        return service.getElasticSearchMetrics();
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/certmanager")
+    public String getCertManagerMetrics() {
+        return service.getCertManagerMetrics();
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/argocd")
+    public String getArgocdMetrics() {
+        return service.getArgocdMetrics();
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/tekton")
+    public String getTektonMetrics() {
+        return service.getTektonMetrics();
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/harbor")
+    public String getHarborMetrics() {
+        return service.getHarborMetrics();
+
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/loki")
+    public String getLokiMetrics() {
+        return service.getLokiMetrics();
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/custom")
+    public String getCustomMetrics() {
+        return service.getCustomMetrics();
+    }
+    @ResponseBody
+    @GetMapping("/metrics/oss/oss")
+    public String getOssMetrics() {
+        return service.getOssMetrics();
     }
 
-    @GetMapping("/getOssMetricsFromEndpoint")
+    // kubernetes 메트릭스
     @ResponseBody
-    public String getOssMetricsFromEndpoint() {
-        return metricHandler.getOssMetricsFromEndpoint();
-    }
-
-    @GetMapping("/getOssMetricsFromEndpoint2")
-    @ResponseBody
-    public CompletableFuture<ResponseEntity<String>> getOssMetricsFromEndpoint2() {
-        return CompletableFuture.supplyAsync(() -> {
-            String result = metricHandler.getOssMetricsFromEndpoint();
-            return ResponseEntity.ok(result);
-        });
-    }
-
-    /*
-    apiserver_request_duration_seconds_bucket
-    apiserver_request_duration_seconds_sum
-    apiserver_request_duration_seconds_count
-    apiserver_request_total
-    go_goroutines
-    process_cpu_seconds_total
-    process_open_fds
-    process_resident_memory_bytes
-    rest_client_request_duration_seconds_bucket
-    rest_client_requests_total
-    workqueue_adds_total
-    workqueue_depth
-    workqueue_queue_duration_seconds_bucket
-     */
-
-    @GetMapping("/getMetrics")
-    @ResponseBody
+    @GetMapping("/metrics/kubernetes")
     public String getMetrics() {
-        return metricHandler.getMetrics();
+        return service.getMetrics();
     }
-
-    /*
-    go_goroutines
-    kubelet_cgroup_manager_duration_seconds_bucket
-    kubelet_cgroup_manager_duration_seconds_count
-    kubelet_pleg_relist_duration_seconds_bucket
-    kubelet_pleg_relist_duration_seconds_count
-    kubelet_pleg_relist_interval_seconds_bucket
-    kubelet_pod_start_duration_seconds_sum
-    kubelet_pod_start_duration_seconds_count
-    kubelet_pod_worker_duration_seconds_bucket
-    kubelet_pod_worker_duration_seconds_count
-    kubelet_running_containers
-    kubelet_running_pods 24
-    kubelet_runtime_operations_duration_seconds_bucket
-    kubelet_runtime_operations_errors_total
-    kubelet_runtime_operations_total
-    process_cpu_seconds_total
-    process_open_fds
-    process_resident_memory_bytes
-    process_start_time_seconds
-    rest_client_request_duration_seconds_bucket
-    rest_client_requests_total
-    storage_operation_duration_seconds_bucket
-    storage_operation_duration_seconds_count
-    volume_manager_total_volumes
-    workqueue_adds_total
-    workqueue_depth
-    workqueue_queue_duration_seconds_bucket
-     */
-    @GetMapping("/getKubeNodeMetrics")
     @ResponseBody
-    public String getKubeNodeMetrics() {
-        return metricHandler.getKubeNodeMetrics();
+    @GetMapping("/metrics/kubernetes/node/proxy")
+    public String getNodeProxyMetrics() {
+        return service.getNodeProxyMetrics();
     }
-    /*
-    container_cpu_usage_seconds_total
-    container_fs_limit_bytes
-    container_fs_reads_bytes_total
-    container_fs_usage_bytes
-    container_fs_writes_bytes_total
-    container_memory_rss
-    container_memory_usage_bytes
-    container_memory_working_set_bytes
-    container_network_receive_bytes_total
-    container_network_receive_errors_total
-     */
-    @GetMapping("getNodenameProxyMetrics")
     @ResponseBody
-    public String getNodeMetrics() {
-        return metricHandler.getNodenameProxyMetrics();
+    @GetMapping("/metrics/kubernetes/node/cadvisor")
+    public String getNodeCadvisorMetrics() {
+        return service.getNodeCadvisorMetrics();
     }
-
 }

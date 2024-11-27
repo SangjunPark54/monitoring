@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
@@ -16,6 +15,10 @@ import org.springframework.web.client.RestTemplate;
 
 import com.cloudzmp.monitoringproxy.config.MetricProperties;
 import com.cloudzmp.monitoringproxy.config.RestTemplateConfig;
+import com.cloudzmp.monitoringproxy.exception.MetricCollectionException;
+import com.cloudzmp.monitoringproxy.logging.LogMetricCollection;
+import com.cloudzmp.monitoringproxy.model.EndpointType;
+import com.cloudzmp.monitoringproxy.model.GrantMetricType;
 
 import io.fabric8.kubernetes.client.dsl.internal.OperationSupport;
 import lombok.extern.slf4j.Slf4j;
@@ -27,106 +30,137 @@ public class MetricCollector {
 
     private final RestTemplate restTemplate;
     private final KubernetesService ks;
-    private final List<String> nginxEndpoint;
-    private final List<String> esEndpoint;
-    private final List<String> certEndpoint;
-    private final List<String> argocdEndpoint;
-    private final List<String> tektonEndpoint;
-    private final List<String> harborEndpoint;
-    private final List<String> lokiEndpoint;
-    private final List<String> ossEndpoint;
-    private final List<String> nginxMetrics;
-    private final List<String> esMetrics;
-    private final List<String> certMetrics;
-    private final List<String> argocdMetrics;
-    private final List<String> tektonMetrics;
-    private final List<String> harborMetrics;
-    private final List<String> lokiMetrics;
-    private final List<String> ossMetrics;
+    private final MetricProperties mp;
 
-    public MetricCollector(MetricProperties metricProperties, MetricProperties.Endpoints endpoints, MetricProperties.GrantMetrics grantMetrics, KubernetesService ks) throws Exception {
-        this.nginxEndpoint = endpoints.getNginx();
-        this.esEndpoint = endpoints.getEs();
-        this.certEndpoint = endpoints.getCert();
-        this.argocdEndpoint = endpoints.getArgocd();
-        this.tektonEndpoint = endpoints.getTekton();
-        this.harborEndpoint = endpoints.getHarbor();
-        this.lokiEndpoint = endpoints.getLoki();
-        this.ossEndpoint = endpoints.getOss();
+    public MetricCollector(MetricProperties mp, KubernetesService ks) throws Exception {
+        this.mp = mp;
         this.ks = ks;
-        this.nginxMetrics = grantMetrics.getIngress();
-        this.esMetrics = grantMetrics.getEs();
-        this.certMetrics = grantMetrics.getCert();
-        this.argocdMetrics = grantMetrics.getArgocd();
-        this.tektonMetrics = grantMetrics.getTekton();
-        this.harborMetrics = grantMetrics.getHarbor();
-        this.lokiMetrics = grantMetrics.getLoki();
-        this.ossMetrics = grantMetrics.getOss();
-
         this.restTemplate = new RestTemplateConfig().createRestTemplate();
     }
 
-    public List<String> getAllMetrics() {
-        log.info("Start getAllMetrics");
-        List<String> result = ossEndpoint.parallelStream()
-                .map(this::collectRawMetric)
-//                .map(this::getAllowedMetrics)
-                .toList();
-        log.info("Done getAllMetrics");
+    @LogMetricCollection
+    public String getNginxIngressMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.nginx);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.nginx);
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+    }
+
+    @LogMetricCollection
+    public String getElasticSearchMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.es);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.es);;
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+    }
+
+    @LogMetricCollection
+    public String getCertManagerMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.cert);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.cert);
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+    }
+
+    @LogMetricCollection
+    public String getArgocdMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.argocd);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.argocd);
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+    }
+
+    @LogMetricCollection
+    public String getTektonMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.tekton);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.tekton);
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+    }
+
+    @LogMetricCollection
+    public String getHarborMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.harbor);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.harbor);
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+
+    }
+
+    @LogMetricCollection
+    public String getLokiMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.loki);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.loki);
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+    }
+
+    @LogMetricCollection
+    public String getCustomMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.custom);
+        List<String> gMetrics = getGrantMetric(GrantMetricType.custom);
+
+        return getGrantMetricFromRawData(endpoints, gMetrics);
+    }
+
+    @LogMetricCollection
+    public String getOssMetrics() {
+        List<String> endpoints = getEndpointUrl(EndpointType.oss);
+        StringBuilder sb = new StringBuilder();
+        for (String endpoint : endpoints) {
+            sb.append(collectRawMetric(endpoint));
+        }
+        return sb.toString();
+    }
+
+    @LogMetricCollection
+    public String getMetrics() {
+        String endpoint = getEndpointUrl(EndpointType.k8s).getFirst();
+        List<String> gMetrics = getGrantMetric(GrantMetricType.kubeMetric);
+
+        String response = getOsResponse(endpoint, null,null,"/metrics");
+
+        return getAllowedMetrics(response, gMetrics);
+    }
+    @LogMetricCollection
+    public String getNodeProxyMetrics() {
+        String result = "";
+        String endpoint = getEndpointUrl(EndpointType.k8s).getFirst();
+        List<String> gMetrics = getGrantMetric(GrantMetricType.kubeNodeMetric);
+
+        try {
+            List<String> nodeList = ks.getNodeList();
+            for (String node : nodeList) {
+                String response = getOsResponse(endpoint, "/api/v1/nodes/", node, "/proxy/metrics");
+                return getAllowedMetrics(response, gMetrics);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to fetch metrics for node ", e);
+        }
         return result;
     }
 
-    // 10초
-//    public String getOssMetricsFromEndpoint() {
-//        StringBuilder result = new StringBuilder();
-//        try {
-//            ossEndpoint.parallelStream() // 병렬 스트림 사용
-//                    .map(this::collectRawMetric) // 각 엔드포인트에서 메트릭 수집
-//                    .map(this::getAllowedMetrics) // 필터링
-//                    .forEach(filtered -> result.append(filtered).append("\n")); // 결과 누적
-//        } catch (Exception e) {
-//            throw new RuntimeException("Failed to fetch metrics for oss", e);
-//        }
-//        return result.toString();
-//    }
-    /*
-    kube-state-metrics : deploy에서 처리
-    node-exportor : ds에서 처리
+    @LogMetricCollection
+    public String getNodeCadvisorMetrics() {
+        String result = "";
+        String endpoint = getEndpointUrl(EndpointType.k8s).getFirst();
+        List<String> gMetrics = getGrantMetric(GrantMetricType.kubeCadvisor);
 
-        */
-    public String getNginxIngressMetrics() {
-        return getGrantMetricsFromRawData(nginxEndpoint, nginxMetrics);
+        List<String> nodeList = ks.getNodeList();
+        for (String node : nodeList) {
+            String response = getOsResponse(endpoint, "/api/v1/nodes/",node,"/proxy/metrics/cadvisor");
+            return getAllowedMetrics(response, gMetrics);
+        }
+        return result;
     }
 
-    public String getElasticSearchMetrics() {
-        return getGrantMetricsFromRawData(esEndpoint, esMetrics);
+    private String getOsResponse(String endpoint, String firstPath, String resource, String lastPath) {
+        OperationSupport os = new OperationSupport(ks.getClient());
+        String result = StringUtils.join(endpoint, firstPath, resource, lastPath);
+        return os.handleRaw(String.class, result, "GET", null);
     }
 
-    public String getCertManagerMetrics() {
-        return getGrantMetricsFromRawData(certEndpoint, certMetrics);
-    }
-
-    public String getArgocdMetrics() {
-        return getGrantMetricsFromRawData(argocdEndpoint, argocdMetrics);
-    }
-
-    public String getTektonMetrics() {
-        return getGrantMetricsFromRawData(tektonEndpoint, tektonMetrics);
-    }
-
-    public String getHarborMetrics() {
-        return getGrantMetricsFromRawData(harborEndpoint, harborMetrics);
-    }
-
-    public String getLokiMetrics() {
-        return getGrantMetricsFromRawData(lokiEndpoint, lokiMetrics);
-    }
-
-    public String getOssMetrics() {
-        return getGrantMetricsFromRawData(ossEndpoint, ossMetrics);
-    }
-
-    private String getGrantMetricsFromRawData(List<String> endpointList, List<String> grantMetrics) {
+    private String getGrantMetricFromRawData(List<String> endpointList, List<String> grantMetrics) {
         StringBuilder result = new StringBuilder();
         ExecutorService executor = newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         List<Future<String>> futures = new ArrayList<>();
@@ -148,34 +182,8 @@ public class MetricCollector {
         } finally {
             executor.shutdown();
         }
-
         return result.toString();
     }
-
-//    public String getOssMetricsFromEndpoint() {
-//        StringBuilder result = new StringBuilder();
-//        ExecutorService executor = newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-//        List<Future<String>> futures = new ArrayList<>();
-//
-//        try {
-//            for (String endpoint : ossEndpoint) {
-//                futures.add(executor.submit(() -> {
-//                    String response = collectRawMetric(endpoint);
-//                    return getAllowedMetrics(response, ossMetrics);
-//                }));
-//            }
-//
-//            for (Future<String> future : futures) {
-//                result.append(future.get()).append("\n"); // Future 결과 가져오기
-//            }
-//        } catch (Exception e) {
-//            throw new RuntimeException("Failed to fetch metrics for oss", e);
-//        } finally {
-//            executor.shutdown(); // ExecutorService 종료
-//        }
-//
-//        return result.toString();
-//    }
 
     private String collectRawMetric(String svcName) {
         try {
@@ -187,7 +195,7 @@ public class MetricCollector {
         }
     }
 
-    public String getAllowedMetrics(String rawMetrics, List<String> allowedMetrics) {
+    private String getAllowedMetrics(String rawMetrics, List<String> grantMetrics) {
         List<String> lines = List.of(rawMetrics.split("\n"));
         int numThreads = Runtime.getRuntime().availableProcessors();
 
@@ -198,7 +206,7 @@ public class MetricCollector {
                         .values().stream()
                         .map(chunk -> (Callable<List<String>>) () ->
                                 chunk.stream()
-                                        .filter(line -> allowedMetrics.stream().anyMatch(line::contains))
+                                        .filter(line -> grantMetrics.stream().anyMatch(line::contains))
                                         .collect(Collectors.toList()))
                         .collect(Collectors.toList());
 
@@ -209,230 +217,77 @@ public class MetricCollector {
                             try {
                                 return future.get().stream();
                             } catch (InterruptedException | ExecutionException e) {
-                                throw new RuntimeException("Error while processing metrics", e);
+                                throw new RuntimeException("Error while processing grant metrics from collected metrics", e);
                             }
                         })
                         .collect(Collectors.joining("\n"));
             } catch (InterruptedException e) {
-                throw new RuntimeException("Error while processing metrics", e);
+                throw new RuntimeException("Error while processing grant metrics from collected metrics", e);
             } finally {
                 executor.shutdown();
             }
         }
     }
 
-//    private String getAllowedMetrics(String rawMetrics) {
-//        log.info("start getAllowedMetrics (split + fileter)");
-//        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-//            return executor.submit(() ->
-//                    Arrays.stream(rawMetrics.split("\n"))
-//                            .parallel()
-//                            .filter(raw -> allowedMetrics.stream().anyMatch(raw::contains))
-//                            .collect(Collectors.joining("\n"))
-//            ).get();
-//        } catch (ExecutionException e) {
-//            throw new RuntimeException("Error while processing metrics", e);
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
-//    }
+    private List<String> getEndpointUrl(EndpointType type) {
+        List<String> endpoints = switch (type) {
+            case k8s -> mp.getEndpoints().getK8s();
+            case nginx -> mp.getEndpoints().getNginx();
+            case es -> mp.getEndpoints().getEs();
+            case cert -> mp.getEndpoints().getCert();
+            case argocd -> mp.getEndpoints().getArgocd();
+            case tekton -> mp.getEndpoints().getTekton();
+            case harbor -> mp.getEndpoints().getHarbor();
+            case loki -> mp.getEndpoints().getLoki();
+            case oss -> mp.getEndpoints().getOss();
+            case custom -> mp.getEndpoints().getCustom();
+            default -> throw new MetricCollectionException("Endpoint type not supported: " + type);
+        };
 
-    // Is Not Metric
-//    public String getNodeMetrics() {
-//        String response = getOsResponse("GET","/api/v1/",null,"nodes");
-//        return getAllowedMetrics(response);
-//    }
-
-    public String getIngressMetrics() {
-        String response = getOsResponse("GET","/apis/",null,"networking.k8s.io/v1/ingresses");
-        String response2 = getOsResponse("GET","/apis/",null,"extentions/v1beta1/ingresses");
-        String result = StringUtils.join(response,response2);
-        return getAllowedMetrics(result, ossMetrics);
-    }
-
-    public String getNodeProxyMetrics() {
-        String result = "";
-        try {
-            List<String> nodeList = ks.getNodeList();
-            for (String node : nodeList) {
-                String response = getOsResponse("GET","/api/v1/nodes/", node, "/proxy/metrics");
-
-                return getAllowedMetrics(response, ossMetrics);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch metrics for node ", e);
+        if (endpoints == null || endpoints.isEmpty()) {
+            throw new MetricCollectionException(type + "Endpoint type is empty");
         }
-        return result;
+
+        return endpoints;
     }
 
-    public String getMetrics() {
-        String response = getOsResponse("GET",null,null,"/metrics");
-        return getAllowedMetrics(response, ossMetrics);
-    }
+    private List<String> getGrantMetric(GrantMetricType type) {
+        List<String> grantMetric = switch (type) {
+            case nginx -> mp.getGrantMetric().getNginx();
+            case es -> mp.getGrantMetric().getEs();
+            case cert -> mp.getGrantMetric().getCert();
+            case tekton -> mp.getGrantMetric().getTekton();
+            case mysql -> mp.getGrantMetric().getMysql();
+            case cortex -> mp.getGrantMetric().getCortex();
+            case loki -> mp.getGrantMetric().getLoki();
+            case mongo -> mp.getGrantMetric().getMongo();
+            case istio -> mp.getGrantMetric().getIstio();
+            case harbor -> mp.getGrantMetric().getHarbor();
+            case argocd -> mp.getGrantMetric().getArgocd();
+            case postgresql -> mp.getGrantMetric().getPostgresql();
+            case oss -> mp.getGrantMetric().getOss();
+            case custom -> mp.getGrantMetric().getCustom();
+            case kubeCadvisor -> mp.getGrantMetric().getKubeCadvisor();
+            case kubeMetric -> mp.getGrantMetric().getKubeMetric();
+            case kubeNodeMetric -> mp.getGrantMetric().getKubeNodeMetric();
+            case kubeStateMetrics -> mp.getGrantMetric().getKubeStateMetrics();
+            default -> throw new MetricCollectionException("Grant Metric is not supported: " + type);
+        };
 
-    public String getNodenameProxyMetrics() {
-        String result = "";
-        List<String> nodeList = ks.getNodeList();
-        for (String node : nodeList) {
-            String response = getOsResponse("GET","/api/v1/nodes/",node,"/proxy/metrics/cadvisor");
-            return getAllowedMetrics(response, ossMetrics);
+        if (grantMetric == null || grantMetric.isEmpty()) {
+            throw new MetricCollectionException(type + "GrantMetric is not specified in request");
         }
-        return result;
+        return grantMetric;
     }
-
-    //NOT METRICS
-    public String getServiceMetrics() {
-        try {
-            String response = getOsResponse("GET","/api/v1/",null,"services");
-            return getAllowedMetrics(response, ossMetrics);
-        } catch (Exception e) {
-            throw new RuntimeException("Error get metrics from service {}", e);
-        }
-    }
-
-    // NOT METRICS
-    public String getServiceNamespaceMetrics() {
-        String result = "";
-        try {
-            List<String> nsList = ks.getNamespaceList();
-            for (String ns : nsList) {
-                String response = getOsResponse("GET","/api/v1/namespaces/", ns, "/services");
-                return getAllowedMetrics(response, ossMetrics);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Error get metrics from services metrics", e);
-        }
-        return result;
-    }
-
-    public String getPodMetrics() {
-        try {
-            String response = getOsResponse("GET","/api/v1/",null,"pods");
-            return getAllowedMetrics(response, ossMetrics);
-        } catch (Exception e) {
-            throw new RuntimeException("Error get metrics from services metrics", e);
-        }
-    }
-
-    public String getNamespacePodMetrics() {
-        String result = "";
-        try {
-            List<String> nsList = ks.getNamespaceList();
-            for (String ns : nsList) {
-                String response = getOsResponse("GET","/api/v1/namespaces/",ns,"/pods");
-                return getAllowedMetrics(response, ossMetrics);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Error get metrics from services metrics", e);
-        }
-        return result;
-    }
-
-    public String getEndpointsMetrics() {
-        try {
-            String response = getOsResponse("GET","/api/v1/",null,"endpoints");
-            return getAllowedMetrics(response, ossMetrics);
-        } catch (Exception e) {
-            throw new RuntimeException("Error while processing metrics for endpoint", e);
-        }
-    }
-
-    public String getNamespaceEndpointMetrics() {
-        String result = "";
-        try {
-            List<String> namespaceList = ks.getNamespaceList();
-            for (String namespace : namespaceList) {
-                String response = getOsResponse("GET","/api/v1/namespaces/", namespace, "/endpoints");
-                return getAllowedMetrics(response, ossMetrics);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch metrics for endpoint ", e);
-        }
-        return result;
-    }
-
-    private String getOsResponse(String method, String firstPath, String resource, String lastPath) {
-        OperationSupport os = new OperationSupport(ks.getClient());
-        String endpoint = StringUtils.join(kubeEndpoint, firstPath, resource, lastPath);
-        return os.handleRaw(String.class, endpoint, method, null);
-    }
-
-
-
-}
-
-
-
-
-
-
-
-
-
-
-
-
-//    private List<String> getAllowedMetrics(String rawMetrics) {
-//        log.info("split lines..");
-//        List<String> result = Arrays.stream(rawMetrics.split("\n")).parallel()
-//                .filter(raw -> allowedMetrics.parallelStream().anyMatch(raw::contains))
-//                .collect(Collectors.toList());
-//        log.info("Successfully scrape Metrics");
-//        log.debug("raw:{}, filtered: {}", rawMetrics, result);
-//        return result;
-//    }
-
-//        List<String> nodeList = getNodeList();
-//        String bearerToken = "eyJhbGciOiJSUzI1NiIsImtpZCI6IlJCTE1lT3NUUWFpZVhmRzVKazRWOThnblZ1T3ExdE1YWUpJTkZzM1RPREEifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJ6Y3Atc3lzdGVtIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6InpjcC1tY20tYmFja2VuZC1zZXJ2aWNlLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQubmFtZSI6InpjcC1tY20tYmFja2VuZC1zZXJ2aWNlLWFkbWluIiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZXJ2aWNlLWFjY291bnQudWlkIjoiMTkyZWQ1YzUtOTQ0YS00OGI2LTk3MWYtNTRjNTg5NGEyMGFlIiwic3ViIjoic3lzdGVtOnNlcnZpY2VhY2NvdW50OnpjcC1zeXN0ZW06emNwLW1jbS1iYWNrZW5kLXNlcnZpY2UtYWRtaW4ifQ.Q2BRCaDezoXzgUgGGBcfWrFgoaFO-th3GXxUmuZfJKwa_Gk03754IZmbX3yI1psXa6LfVv60CgHHraamKyFLuAjQfjlAEd55PnpaobSQHSjrA-2Vuz4SzC0QB_0yIThRdmejv8DdvF2x7RvWh0GADW56G6IuX5MEPdqZTHT8pjvROvhIHEz5w3z5TXsZB-ipKOmAnkCzX0zSg6Xj2y28o9N3XvimBambfa0ZIxm0jqI28RfIUXp7TozoIGqBbrTVZ5YCfqxNS2wYy2bd4RtBm3ksCy94JptwDBsLK4qe6OAAIeaSlwnt5MzbtxK61fuIZbXYaA7yPQwJ0EETP6tzUw";
+    //    public String getNodeResourceMetrics() {
+//        String result = "";
+//        String endpoint = mp.getEndpoints().getK8s().get(0);
+//        List<String> gMetrics = mp.getGrantMetric().getKubeMetric();
+//        List<String> nodeList = ks.getNodeList();
 //        for (String node : nodeList) {
-//            String endpoint = StringUtils.join(kubeEndpoint+"/api/v1/nodes/"+node+"/proxy/metrics");
-//
-//            HttpHeaders headers = new HttpHeaders();
-//            headers.set("Authorization", "Bearer " + bearerToken);
-//            HttpEntity<String> entity = new HttpEntity<>(headers);
-//
-//            ResponseEntity<String> response = restTemplate.exchange(
-//                    endpoint, HttpMethod.GET, entity, String.class
-//            );
-//            result.put(node,getAllowedMetrics(response.getBody()));
+//            String response = getOsResponse(endpoint,"GET","/api/v1/nodes/",node,"/proxy/metrics/resource");
+//            return getAllowedMetrics(response, gMetrics);
 //        }
 //        return result;
-
-//    public static List<String> convertJsonToList(String jsonArray) throws JsonProcessingException {
-//        List<String> imageList = new ArrayList<>();
-//
-//        try {
-//            // JSON 파싱을 위한 ObjectMapper 생성
-//            ObjectMapper objectMapper = new ObjectMapper();
-//
-//            // JSON 데이터를 JsonNode로 변환
-//            JsonNode rootNode = objectMapper.readTree(jsonArray);
-//
-//            // items 배열 추출
-//            JsonNode itemsNode = rootNode.path("items");
-//
-//            // 각 노드의 이미지 정보 추출
-//            for (JsonNode item : itemsNode) {
-//                JsonNode imagesNode = item.path("status").path("images");
-//
-//                // 이미지 배열 순회
-//                for (JsonNode image : imagesNode) {
-//                    JsonNode namesNode = image.path("names");
-//                    long sizeBytes = image.path("sizeBytes").asLong();
-//
-//                    // 각 이름에 대해 문자열 생성 및 리스트에 추가
-//                    for (Iterator<JsonNode> it = namesNode.elements(); it.hasNext();) {
-//                        String imageName = it.next().asText();
-//                        imageList.add(imageName + " - " + sizeBytes);
-//                    }
-//                }
-//            }
-//        } catch (JsonProcessingException e) {
-//            throw e;
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//        return imageList;
 //    }
-
+}
