@@ -1,6 +1,4 @@
-package com.cloudzmp.monitoringproxy.model;
-
-import java.util.List;
+package com.cloudzmp.metricagent.model;
 
 public enum EndpointType {
     k8s,

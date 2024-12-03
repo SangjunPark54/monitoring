@@ -3,48 +3,22 @@ spring:
     name: metric-agent
   config:
     import:
-      - classpath:/application-prd.yaml
-
+      - classpath:/config/grantmetric.yaml
+  profiles:
+    active: prd
 server:
   port: 8080
-  compression:
-    enabled: true
-    mime-types: application/json,application/xml,text/html,text/xml,text/plain
-    min-response-size: 1024
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: prometheus
-  endpoint:
-    prometheus:
-      enabled : true
 logging:
   level:
-#    root: DEBUG
-#    org.springdoc: DEBUG
-#    io.swagger.v3: DEBUG
-#    io.fabric8.kubernetes: DEBUG
-#    com.cloudzmp.metricagent: DEBUG
-openapi:
-  service:
-    url: http://localhost:${server.port}
-
-#  ep-oss:
-#    - http://localhost:10003/metrics # nginx-ingress-controller
-#    - http://localhost:10002/metrics # kube-state-metrics Don't Need in here.
-
+    org.springdoc: INFO
+    io.swagger.v3: INFO
+    com.cloudzmp: DEBUG
 zcp:
+  token: null
   realm: ags
   endpoints:
     k8s:
-      - https://kubernetes.docker.internal:6443
+      - https://kubernetes.default.svc
     nginx:
       - http://private-ingress-nginx-controller-metrics.kube-system.svc:10254
     cert:

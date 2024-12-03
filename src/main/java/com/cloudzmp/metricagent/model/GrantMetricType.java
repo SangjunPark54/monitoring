@@ -1,4 +1,4 @@
-package com.cloudzmp.monitoringproxy.model;
+package com.cloudzmp.metricagent.model;
 
 public enum GrantMetricType {
     nginx,

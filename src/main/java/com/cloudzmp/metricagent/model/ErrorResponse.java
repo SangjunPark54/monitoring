@@ -1,4 +1,4 @@
-package com.cloudzmp.monitoringproxy.model;
+package com.cloudzmp.metricagent.model;
 
 import java.time.LocalDateTime;
 

@@ -1,4 +1,4 @@
-package com.cloudzmp.monitoringproxy.logging;
+package com.cloudzmp.metricagent.logging;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

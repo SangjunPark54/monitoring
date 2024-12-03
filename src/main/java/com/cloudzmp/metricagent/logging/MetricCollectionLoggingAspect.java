@@ -1,4 +1,4 @@
-package com.cloudzmp.monitoringproxy.logging;
+package com.cloudzmp.metricagent.logging;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class MetricCollectionLoggingAspect {
 
-    @Around("@annotation(LogMetricCollection), execution(* com.cloudzmp.monitoringproxy.service.MetricCollector.*(..))")
+    @Around("@annotation(LogMetricCollection), execution(* com.cloudzmp.metricagent.service.MetricCollector.*(..))")
     public Object logMetricCollection(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
         try {

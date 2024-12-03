@@ -1,4 +1,4 @@
-package com.cloudzmp.monitoringproxy.exception;
+package com.cloudzmp.metricagent.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

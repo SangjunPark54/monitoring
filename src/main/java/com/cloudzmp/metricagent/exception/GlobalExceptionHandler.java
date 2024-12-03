@@ -1,4 +1,4 @@
-package com.cloudzmp.monitoringproxy.exception;
+package com.cloudzmp.metricagent.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import com.cloudzmp.monitoringproxy.model.ErrorResponse;
+import com.cloudzmp.metricagent.model.ErrorResponse;
 
 import io.fabric8.kubernetes.client.KubernetesClientException;
 

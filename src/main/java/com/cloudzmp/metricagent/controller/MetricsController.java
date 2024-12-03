@@ -1,15 +1,10 @@
-package com.cloudzmp.monitoringproxy.controller;
+package com.cloudzmp.metricagent.controller;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.cloudzmp.monitoringproxy.service.MetricCollector;
-import com.cloudzmp.monitoringproxy.service.MetricHandler;
+import com.cloudzmp.metricagent.service.MetricCollector;
 
 import lombok.extern.slf4j.Slf4j;
 

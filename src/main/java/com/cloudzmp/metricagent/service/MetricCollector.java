@@ -1,4 +1,4 @@
-package com.cloudzmp.monitoringproxy.service;
+package com.cloudzmp.metricagent.service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,12 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import com.cloudzmp.monitoringproxy.config.MetricProperties;
-import com.cloudzmp.monitoringproxy.config.RestTemplateConfig;
-import com.cloudzmp.monitoringproxy.exception.MetricCollectionException;
-import com.cloudzmp.monitoringproxy.logging.LogMetricCollection;
-import com.cloudzmp.monitoringproxy.model.EndpointType;
-import com.cloudzmp.monitoringproxy.model.GrantMetricType;
+import com.cloudzmp.metricagent.config.MetricProperties;
+import com.cloudzmp.metricagent.config.RestTemplateConfig;
+import com.cloudzmp.metricagent.exception.MetricCollectionException;
+import com.cloudzmp.metricagent.logging.LogMetricCollection;
+import com.cloudzmp.metricagent.model.EndpointType;
+import com.cloudzmp.metricagent.model.GrantMetricType;
 
 import io.fabric8.kubernetes.client.dsl.internal.OperationSupport;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +43,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.nginx);
         List<String> gMetrics = getGrantMetric(GrantMetricType.nginx);
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
     }
 
     @LogMetricCollection
@@ -51,7 +51,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.es);
         List<String> gMetrics = getGrantMetric(GrantMetricType.es);;
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
     }
 
     @LogMetricCollection
@@ -59,7 +59,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.cert);
         List<String> gMetrics = getGrantMetric(GrantMetricType.cert);
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
     }
 
     @LogMetricCollection
@@ -67,7 +67,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.argocd);
         List<String> gMetrics = getGrantMetric(GrantMetricType.argocd);
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
     }
 
     @LogMetricCollection
@@ -75,7 +75,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.tekton);
         List<String> gMetrics = getGrantMetric(GrantMetricType.tekton);
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
     }
 
     @LogMetricCollection
@@ -83,7 +83,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.harbor);
         List<String> gMetrics = getGrantMetric(GrantMetricType.harbor);
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
 
     }
 
@@ -92,7 +92,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.loki);
         List<String> gMetrics = getGrantMetric(GrantMetricType.loki);
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
     }
 
     @LogMetricCollection
@@ -100,7 +100,7 @@ public class MetricCollector {
         List<String> endpoints = getEndpointUrl(EndpointType.custom);
         List<String> gMetrics = getGrantMetric(GrantMetricType.custom);
 
-        return getGrantMetricFromRawData(endpoints, gMetrics);
+        return getGrantMetricFromListOfRawData(endpoints, gMetrics);
     }
 
     @LogMetricCollection
@@ -120,7 +120,7 @@ public class MetricCollector {
 
         String response = getOsResponse(endpoint, null,null,"/metrics");
 
-        return getAllowedMetrics(response, gMetrics);
+        return getGrantMetricsFromRawData(response, gMetrics);
     }
     @LogMetricCollection
     public String getNodeProxyMetrics() {
@@ -132,7 +132,7 @@ public class MetricCollector {
             List<String> nodeList = ks.getNodeList();
             for (String node : nodeList) {
                 String response = getOsResponse(endpoint, "/api/v1/nodes/", node, "/proxy/metrics");
-                return getAllowedMetrics(response, gMetrics);
+                return getGrantMetricsFromRawData(response, gMetrics);
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch metrics for node ", e);
@@ -149,18 +149,18 @@ public class MetricCollector {
         List<String> nodeList = ks.getNodeList();
         for (String node : nodeList) {
             String response = getOsResponse(endpoint, "/api/v1/nodes/",node,"/proxy/metrics/cadvisor");
-            return getAllowedMetrics(response, gMetrics);
+            return getGrantMetricsFromRawData(response, gMetrics);
         }
         return result;
     }
 
     private String getOsResponse(String endpoint, String firstPath, String resource, String lastPath) {
         OperationSupport os = new OperationSupport(ks.getClient());
-        String result = StringUtils.join(endpoint, firstPath, resource, lastPath);
-        return os.handleRaw(String.class, result, "GET", null);
+        String requestURI = StringUtils.join(endpoint, firstPath, resource, lastPath);
+        return os.handleRaw(String.class, requestURI, "GET", null);
     }
 
-    private String getGrantMetricFromRawData(List<String> endpointList, List<String> grantMetrics) {
+    private String getGrantMetricFromListOfRawData(List<String> endpointList, List<String> grantMetrics) {
         StringBuilder result = new StringBuilder();
         ExecutorService executor = newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         List<Future<String>> futures = new ArrayList<>();
@@ -170,7 +170,7 @@ public class MetricCollector {
                 log.info("Start to collect Grant Metrics From endpoint : {}", endpoint);
                 futures.add(executor.submit(() -> {
                     String response = collectRawMetric(endpoint);
-                    return getAllowedMetrics(response, grantMetrics);
+                    return getGrantMetricsFromRawData(response, grantMetrics);
                 }));
             }
             for (Future<String> future : futures) {
@@ -187,15 +187,15 @@ public class MetricCollector {
 
     private String collectRawMetric(String svcName) {
         try {
-            String result = restTemplate.getForObject(svcName, String.class);
+            String rawMetric = restTemplate.getForObject(svcName, String.class);
             log.info("Finished collecting raw metric from service : {}", svcName);
-            return result;
+            return rawMetric;
         } catch (RestClientException e) {
             throw new RuntimeException("Failed to collect metric from service : ", e);
         }
     }
 
-    private String getAllowedMetrics(String rawMetrics, List<String> grantMetrics) {
+    private String getGrantMetricsFromRawData(String rawMetrics, List<String> grantMetrics) {
         List<String> lines = List.of(rawMetrics.split("\n"));
         int numThreads = Runtime.getRuntime().availableProcessors();
 

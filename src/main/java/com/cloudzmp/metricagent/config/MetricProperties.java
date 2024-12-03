@@ -1,10 +1,8 @@
-package com.cloudzmp.monitoringproxy.config;
+package com.cloudzmp.metricagent.config;
 
 import java.util.List;
-import java.util.Set;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import lombok.Data;
 import lombok.ToString;
